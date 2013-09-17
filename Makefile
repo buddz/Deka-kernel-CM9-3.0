@@ -193,7 +193,7 @@ SUBARCH := $(shell uname -m | sed -e s/i.86/i386/ -e s/sun4u/sparc64/ \
 # Note: Some architectures assign CROSS_COMPILE in their arch/*/Makefile
 export KBUILD_BUILDHOST := $(SUBARCH)
 ARCH		?=arm
-CROSS_COMPILE	?=/opt/toolchains/arm-cortex_a8-linux-gnueabi-linaro_4.7.4-2013.07/bin/arm-cortex_a8-linux-gnueabi-
+CROSS_COMPILE	?=/opt/toolchains/arm-cortex_a8-linux-gnueabi-linaro_4.8.2-2013.07/bin/arm-cortex_a8-linux-gnueabi-
 
 # Architecture as present in compile.h
 UTS_MACHINE 	:= $(ARCH)
@@ -245,6 +245,8 @@ CONFIG_SHELL := $(shell if [ -x "$$BASH" ]; then echo $$BASH; \
 
 HOSTCC       = gcc
 HOSTCXX      = g++
+HOSTCFLAGS   = -Wall -Wmissing-prototypes -Wstrict-prototypes -O3 -fomit-frame-pointer
+HOSTCXXFLAGS = -O3
 HOSTCFLAGS   = -Wall -Wmissing-prototypes -Wstrict-prototypes -O2 -fomit-frame-pointer
 HOSTCXXFLAGS = -O2
 
@@ -351,6 +353,9 @@ CHECK		= sparse
 
 CHECKFLAGS     := -D__linux__ -Dlinux -D__STDC__ -Dunix -D__unix__ \
 		  -Wbitwise -Wno-return-void $(CF)
+OPTIMIZATION_FLAGS = -march=armv7-a -mtune=cortex-a8 -mfpu=neon \
+                     -fmodulo-sched -fmodulo-sched-allow-regmoves \
+                     -fno-pic -munaligned-access
 CFLAGS_MODULE   =
 AFLAGS_MODULE   =
 LDFLAGS_MODULE  =
@@ -369,10 +374,12 @@ LINUXINCLUDE    := -I$(srctree)/arch/$(hdr-arch)/include \
 KBUILD_CPPFLAGS := -D__KERNEL__
 
 KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs \
-		   -fno-strict-aliasing -fno-common \
-		   -Werror-implicit-function-declaration \
-		   -Wno-format-security \
-		   -fno-delete-null-pointer-checks
+                   -fno-strict-aliasing -fno-common \
+                   -Werror-implicit-function-declaration \
+                   -Wno-format-security \
+                   -fno-delete-null-pointer-checks \
+                   -fno-schedule-insns2 \
+                   $(OPTIMIZATION_FLAGS)
 KBUILD_AFLAGS_KERNEL :=
 KBUILD_CFLAGS_KERNEL :=
 KBUILD_AFLAGS   := -D__ASSEMBLY__
@@ -563,9 +570,16 @@ endif # $(dot-config)
 all: vmlinux
 
 ifdef CONFIG_CC_OPTIMIZE_FOR_SIZE
-KBUILD_CFLAGS	+= -Os
-else
-KBUILD_CFLAGS	+= -O2
+KBUILD_CFLAGS += -Os
+endif
+ifdef CONFIG_CC_OPTIMIZE_DEFAULT
+KBUILD_CFLAGS += -O2
+endif
+ifdef CONFIG_CC_OPTIMIZE_MORE
+KBUILD_CFLAGS += -O3
+endif
+ifdef CONFIG_CC_OPTIMIZE_FAST
+KBUILD_CFLAGS += -Ofast
 endif
 
 include $(srctree)/arch/$(SRCARCH)/Makefile
